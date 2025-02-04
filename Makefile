@@ -21,6 +21,6 @@ clean: down
 bigclean: down
 	$(COMPOSE) -f $(COMPOSE_FILE) rm -f
 	$(COMPOSE) -f $(COMPOSE_FILE) down --volumes --remove-orphans
-	sudo rm -rf srcs/web srcs/database
+	sudo rm -rf /home/ruddy/data/web/* /home/ruddy/data/database/*
 
 re: clean all

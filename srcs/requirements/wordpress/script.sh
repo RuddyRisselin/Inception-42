@@ -1,25 +1,29 @@
 #!/bin/bash
 
-# Attendre que MariaDB soit prêt avant d'exécuter la configuration de WordPress
+TIMER=0
+TIMEOUT=60
 until mysql -h "mariadb" -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1;" &> /dev/null; do
-    echo "En attente de MariaDB..."
+    echo "waiting for MariaDB..."
     sleep 2
 done
 
-echo "MariaDB est prêt, installation de WordPress..."
+echo "MariaDB is ready, installation of Wordpress..."
 
 cd /var/www/html
 
-# Télécharger WP-CLI
-curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-chmod +x wp-cli.phar
+if [ ! -f "wp-cli.phar" ]; then
+    echo "downloading WP-CLI..."
+    curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    chmod +x wp-cli.phar
+fi
 
-# Télécharger WordPress
-./wp-cli.phar core download --allow-root
-
-# Vérifier si wp-config.php existe déjà avant de le recréer
 if [ ! -f "wp-config.php" ]; then
-    echo "Création de wp-config.php..."
+    echo "downloading WordPress..."
+    ./wp-cli.phar core download --allow-root
+fi
+
+if [ ! -f "wp-config.php" ]; then
+    echo "Configuration of WordPress..."
     ./wp-cli.phar config create \
         --dbname="$DB_NAME" \
         --dbuser="$DB_USER" \
@@ -27,12 +31,11 @@ if [ ! -f "wp-config.php" ]; then
         --dbhost="mariadb:3306" \
         --allow-root
 else
-    echo "wp-config.php existe déjà, pas besoin de le recréer."
+    echo "wp-config.php already exist"
 fi
 
-# Vérifier si WordPress est déjà installé
 if ! ./wp-cli.phar core is-installed --allow-root; then
-    echo "Installation de WordPress..."
+    echo "Installation of WordPress..."
     ./wp-cli.phar core install \
         --url="$DOMAIN_NAME" \
         --title="$SITE_TITLE" \
@@ -41,14 +44,14 @@ if ! ./wp-cli.phar core is-installed --allow-root; then
         --admin_email="$ADMIN_EMAIL" \
         --allow-root
 else
-    echo "WordPress est déjà installé."
+    echo "WordPress is already install."
 fi
 
 if ! ./wp-cli.phar user list --allow-root | grep -q "$WP_USER"; then
-    echo "Création de l'utilisateur WordPress supplémentaire..."
+    echo "Création of user1 WordPress..."
     ./wp-cli.phar user create "$WP_USER" "$WP_EMAIL" --role="$WP_ROLE" --user_pass="$WP_PASSWORD" --allow-root
 else
-    echo "L'utilisateur WordPress $WP_USER existe déjà."
+    echo "$WP_USER already exist."
 fi
 
 # Lancer PHP-FPM
